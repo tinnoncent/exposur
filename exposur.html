@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EXPOSUR — Era-Accurate Prompt Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f2ed;
+  --bg2: #edeae4;
+  --panel: #ffffff;
+  --border: #ddd9d2;
+  --border-dark: #c4bfb7;
+  --ink: #1a1814;
+  --ink-mid: #5a5650;
+  --ink-light: #9a9690;
+  --accent: #c8522a;
+  --accent-light: #f0ddd5;
+  --accent2: #2a5c8a;
+  --accent2-light: #d5e4f0;
+  --gold: #b8962a;
+  --gold-light: #f5edcc;
+  --shadow-sm: 0 1px 3px rgba(26,24,20,0.08), 0 1px 2px rgba(26,24,20,0.06);
+  --shadow-md: 0 4px 16px rgba(26,24,20,0.1), 0 2px 6px rgba(26,24,20,0.07);
+  --shadow-lg: 0 12px 40px rgba(26,24,20,0.12), 0 4px 12px rgba(26,24,20,0.08);
+  --radius: 3px;
+  --radius-lg: 6px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Grain texture overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1000;
+  opacity: 0.4;
+}
+
+/* ── HEADER ── */
+.header {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-md);
+}
+
+.logo {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+  color: var(--bg);
+}
+
+.logo span {
+  color: var(--accent);
+}
+
+.header-tagline {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+/* ── LAYOUT ── */
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 40px 24px 100px;
+}
+
+/* ── YEAR HERO ── */
+.year-hero {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 40px 48px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.year-hero::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), var(--gold), var(--accent2));
+}
+
+.year-hero-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 40px;
+  margin-bottom: 28px;
+}
+
+.year-number {
+  font-family: 'DM Serif Display', serif;
+  font-size: 96px;
+  line-height: 0.9;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  transition: all 0.1s;
+  min-width: 280px;
+}
+
+.year-era-info {
+  padding-bottom: 8px;
+}
+
+.era-badge {
+  display: inline-block;
+  background: var(--accent-light);
+  color: var(--accent);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
+
+.era-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.era-desc {
+  font-size: 13px;
+  color: var(--ink-mid);
+  max-width: 380px;
+  line-height: 1.6;
+}
+
+/* Slider */
+.slider-wrap {
+  position: relative;
+}
+
+.decade-marks {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.decade-mark {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-light);
+  letter-spacing: 0.05em;
+  position: relative;
+}
+
+.decade-mark.active {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+input[type=range] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border-dark);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  background: var(--accent);
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(200,82,42,0.4);
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+  box-shadow: 0 3px 14px rgba(200,82,42,0.5);
+  transform: scale(1.1);
+}
+
+.slider-year-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 2px;
+}
+
+.slider-year-labels span {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-light);
+}
+
+/* ── CONTEXT SELECTOR ── */
+.context-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.context-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border: 1px solid var(--border-dark);
+  background: var(--panel);
+  color: var(--ink-mid);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.context-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.context-btn.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+.context-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 10px;
+}
+
+/* ── INFO GRID ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 720px) {
+  .info-grid { grid-template-columns: 1fr 1fr; }
+  .year-hero { padding: 28px 24px; }
+  .year-number { font-size: 64px; min-width: auto; }
+  .year-hero-top { flex-direction: column; gap: 16px; }
+}
+
+@media (max-width: 480px) {
+  .info-grid { grid-template-columns: 1fr; }
+}
+
+.info-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s;
+}
+
+.info-card:hover { box-shadow: var(--shadow-md); }
+
+.info-card-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-card-label .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+.info-card-label .dot.blue { background: var(--accent2); }
+.info-card-label .dot.gold { background: var(--gold); }
+.info-card-label .dot.green { background: #4a8a5a; }
+.info-card-label .dot.purple { background: #7a4a8a; }
+.info-card-label .dot.teal { background: #2a8a7a; }
+
+.info-card-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 16px;
+  color: var(--ink);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.info-card-sub {
+  font-size: 12px;
+  color: var(--ink-mid);
+  line-height: 1.5;
+}
+
+/* Camera tabs */
+.camera-section {
+  margin-bottom: 20px;
+}
+
+.tab-row {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.tab {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: var(--ink-light);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: all 0.15s;
+}
+
+.tab:hover { color: var(--ink-mid); }
+
+.tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── DAMAGE TOGGLES ── */
+.damage-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
+}
+
+.damage-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.damage-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-dark);
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--ink-mid);
+  background: var(--bg);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.damage-tag:hover { border-color: var(--ink-mid); color: var(--ink); }
+
+.damage-tag.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+/* ── PROMPT OUTPUT ── */
+.prompts-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+}
+
+.prompts-header {
+  background: var(--ink);
+  color: var(--bg);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prompts-header-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+}
+
+.prompts-header-sub {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 0.1em;
+}
+
+.generate-btn {
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 10px 24px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(200,82,42,0.3);
+}
+
+.generate-btn:hover {
+  background: #b04520;
+  box-shadow: 0 4px 14px rgba(200,82,42,0.4);
+  transform: translateY(-1px);
+}
+
+.generate-btn:active { transform: translateY(0); }
+
+/* Generator picker */
+.gen-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.gen-picker-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  white-space: nowrap;
+}
+
+.gen-select-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+}
+
+.gen-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--panel);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 36px 10px 14px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+  box-shadow: var(--shadow-sm);
+}
+
+.gen-select:focus { border-color: var(--accent); }
+
+.gen-select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--ink-light);
+  font-size: 10px;
+}
+
+.gen-type-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 2px;
+}
+
+.badge-img { background: var(--accent-light); color: var(--accent); }
+.badge-vid { background: var(--accent2-light); color: var(--accent2); }
+
+/* Prompt box */
+.prompt-pane {
+  padding: 24px;
+  display: none;
+}
+
+.prompt-pane.active { display: block; }
+
+.prompt-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.prompt-meta-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.prompt-meta-type {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+
+.type-image { background: var(--accent-light); color: var(--accent); }
+.type-video { background: var(--accent2-light); color: var(--accent2); }
+
+.prompt-tip {
+  font-size: 12px;
+  color: var(--ink-light);
+  font-style: italic;
+  margin-bottom: 14px;
+}
+
+.prompt-box {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--ink-mid);
+  line-height: 1.8;
+  position: relative;
+  min-height: 80px;
+}
+
+.prompt-box .prompt-text {
+  padding-right: 80px;
+}
+
+.copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border-dark);
+  border-radius: 2px;
+  cursor: pointer;
+  color: var(--ink-mid);
+  transition: all 0.15s;
+}
+
+.copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+.copy-btn.copied { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* Plain english section */
+.plain-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.plain-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 8px;
+}
+
+.plain-text {
+  font-size: 13px;
+  color: var(--ink-mid);
+  line-height: 1.7;
+  font-style: italic;
+}
+
+/* ── REFERENCE IMAGE ── */
+.reference-section {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+.reference-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.reference-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+}
+
+.reference-era {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+.reference-img-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--bg2);
+}
+
+.reference-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.4s ease;
+}
+
+.reference-caption {
+  padding: 10px 16px;
+  font-size: 11px;
+  color: var(--ink-light);
+  font-family: 'DM Mono', monospace;
+  font-style: italic;
+  border-top: 1px solid var(--border);
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 60px 40px;
+  color: var(--ink-light);
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+
+.empty-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 22px;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+}
+
+.empty-sub {
+  font-size: 13px;
+  color: var(--ink-light);
+}
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center;
+  padding: 20px;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-light);
+  letter-spacing: 0.1em;
+}
+
+/* Animations */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate { animation: fadeSlideIn 0.3s ease forwards; }
+
+.section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-light);
+  margin-bottom: 12px;
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">EXPO<span>S</span>UR</div>
+  <div class="header-tagline">Era-Accurate Prompt Generator</div>
+</header>
+
+<main class="app">
+
+  <!-- YEAR HERO -->
+  <div class="year-hero">
+    <div class="year-hero-top">
+      <div class="year-number" id="yearDisplay">1963</div>
+      <div class="year-era-info">
+        <div class="era-badge" id="eraBadge">Space Age</div>
+        <div class="era-name" id="eraName">Cold War Documentary Era</div>
+        <div class="era-desc" id="eraDesc">The era of institutional film — NASA, military documentation, educational cinema. Cameras were tools of record, not art. That tension is visible in every frame.</div>
+      </div>
+    </div>
+
+    <div class="slider-wrap">
+      <div class="decade-marks" id="decadeMarks"></div>
+      <input type="range" id="yearSlider" min="1920" max="2019" value="1963" step="1">
+      <div class="slider-year-labels">
+        <span>1920</span>
+        <span>2019</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOOTING CONTEXT -->
+  <div style="margin-bottom:20px;">
+    <div class="section-title">Shooting Context</div>
+    <div class="context-row" id="contextRow">
+      <button class="context-btn active" data-ctx="documentary">Documentary</button>
+      <button class="context-btn" data-ctx="studio">Studio / Controlled</button>
+      <button class="context-btn" data-ctx="surveillance">Surveillance / Security</button>
+      <button class="context-btn" data-ctx="broadcast">Broadcast / News</button>
+      <button class="context-btn" data-ctx="home">Home / Consumer</button>
+      <button class="context-btn" data-ctx="scientific">Scientific / Medical</button>
+    </div>
+  </div>
+
+  <!-- CAMERA SECTION -->
+  <div class="camera-section">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+      <div class="section-title" style="margin:0;">Camera & Medium</div>
+      <div class="tab-row" style="border:none; margin:0;">
+        <button class="tab active" data-tab="still">Still / Photo</button>
+        <button class="tab" data-tab="video">Motion / Video</button>
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 200px; gap: 12px; align-items:start;" id="cameraLayoutGrid">
+      <div class="info-grid" id="cameraGrid" style="margin:0;"></div>
+      <div class="reference-section" id="referencePanel">
+        <div class="reference-header">
+          <span class="reference-label">Era Reference</span>
+          <span class="reference-era" id="referenceEraLabel">1960s</span>
+        </div>
+        <div class="reference-img-wrap">
+          <img id="referenceImg" src="era_1960.png" alt="Era reference photograph">
+        </div>
+        <div class="reference-caption" id="referenceCaption">Generated using this era's prompt</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILM + LIGHTING + LENS -->
+  <div class="info-grid" id="techGrid" style="margin-bottom:20px;">
+    <!-- populated by JS -->
+  </div>
+
+  <!-- DAMAGE / AUTHENTICITY -->
+  <div class="damage-section">
+    <div class="section-title">Damage & Authenticity Layer</div>
+    <p style="font-size:12px; color:var(--ink-light); margin-bottom:4px;">Toggle artifacts to include in prompts. Based on era defaults — override freely.</p>
+    <div class="damage-grid" id="damageGrid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+
+  <!-- PROMPT OUTPUT -->
+  <div class="prompts-section" id="promptsSection">
+    <div class="prompts-header">
+      <div>
+        <div class="prompts-header-title">Generated Prompts</div>
+        <div class="prompts-header-sub">Click generate — copy directly into your tool of choice</div>
+      </div>
+      <button class="generate-btn" onclick="generatePrompts()">Generate Prompts →</button>
+    </div>
+
+    <div id="promptsBody">
+      <div class="empty-state">
+        <div class="empty-icon">◎</div>
+        <div class="empty-title">Set your parameters above</div>
+        <div class="empty-sub">Choose a year, context, and damage layer — then generate.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">EXPOSUR · Era-Accurate Prompt Generator · Built for AI Artists</div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════
+// ERA DATABASE
+// ═══════════════════════════════════════════════
+
+const eraData = [
+  {
+    range: [1920, 1929],
+    badge: "Silent Era",
+    name: "The Silent Lens",
+    desc: "Pre-sound cinema. Hand-cranked cameras, orthochromatic stock. No sync sound, no color. Pure light and shadow.",
+    still: {
+      camera: "Graflex Series B / Speed Graphic",
+      cameraDetail: "Large format press camera. 4×5 glass plates or cut film. Focal plane shutter.",
+      film: "Orthochromatic Glass Plate",
+      filmDetail: "Insensitive to red. Blue sky burns to white. Skin reads neutral.",
+    },
+    video: {
+      camera: "Bell & Howell Filmo 75",
+      cameraDetail: "16mm hand-cranked. Spring motor. Variable frame rate from hand cranking.",
+      film: "Kodak Panchromatic 16mm",
+      filmDetail: "High contrast orthochromatic successor. Silver-rich emulsion.",
+    },
+    lighting: {
+      studio: "Hard arc lamp single source. Deep directional shadow. No fill.",
+      documentary: "Available daylight only. High contrast. Window light or open shade.",
+      surveillance: "N/A — no surveillance infrastructure yet.",
+      broadcast: "N/A — no broadcast era yet.",
+      home: "Kodachrome daylight only. Outdoors scenes predominate.",
+      scientific: "Controlled arc lamp. Flat front-lit. Shadowless scientific record.",
+    },
+    lens: "Uncoated single-element. Significant spherical aberration. Soft edges. Halo blooms on highlights.",
+    damages: ["extreme grain", "silver halide bleed", "hand crank frame stutter", "film splice marks", "corner vignette", "emulsion scratches"],
+    pikaBase: "1920s silent film era, orthochromatic black and white, extreme contrast, hand-cranked frame rate irregularity, no sound era, shadow areas crush to pure black with no retained detail, uncoated single-element lens softness, no modern micro-contrast in dark areas",
+    mjBase: "1920s silent film photograph, orthochromatic emulsion, hard shadow, halation glow, silver gelatin print, shadow areas pure black no detail, uncoated lens soft resolution, no modern micro-contrast",
+    fluxBase: "Silent era 1920s photographic aesthetic, orthochromatic film stock, deep shadow contrast, uncoated single-element lens softness, shadow areas block to pure black, no mid-shadow detail retention, no modern micro-contrast in dark areas",
+    gptBase: "Photographed on a 1920s Speed Graphic camera with orthochromatic glass plate film. High contrast black and white with soft halation around highlights and deep crushed shadows. Uncoated single-element lens produces soft overall resolution with no modern micro-contrast. Shadow areas block to pure black with zero retained detail — no wood grain, no texture visible in dark regions. Early emulsion logic, not modern sensor rendering.",
+    sdBase: "1920s silent era, orthochromatic film, silver gelatin, extreme contrast, halation, shadow crush pure black, uncoated lens soft, no micro-contrast dark areas",
+    ideogramBase: "1920s orthochromatic photographic style, silent era aesthetic, high contrast black and white, halation highlights, shadows crush to pure black, uncoated lens softness, no modern detail in dark areas",
+    fireflyBase: "Style of 1920s orthochromatic photography, silent film era, high contrast monochrome, soft edge vignette, shadow areas block to pure black, uncoated lens resolution, no modern micro-contrast",
+    pikaVideo: "1920s silent film footage, orthochromatic black and white, hand-cranked frame irregularity, film splice artifacts, hard arc lamp lighting, shadow areas pure black no detail, uncoated lens softness throughout",
+    klingVideo: "Silent era 1920s cinema, orthochromatic stock, variable frame rate, deep shadow contrast, no ambient fill, corner vignette, shadows block to pure black, no modern micro-contrast in dark regions",
+    runwayVideo: "1920s silent film aesthetic, orthochromatic emulsion, irregular frame rate, silver bleed artifacts, hard single-source lighting, shadow areas crush to black, uncoated lens soft resolution",
+    soraVideo: "Footage styled as 1920s silent film, orthochromatic black and white, hand-cranked camera movement, film splice damage, shadows pure black no detail, early emulsion rendering not modern sensor",
+    veoVideo: "1920s silent cinema aesthetic, orthochromatic film, variable frame rate from hand cranking, arc lamp hard lighting, shadow crush to pure black, uncoated lens softness, no modern micro-contrast",
+    lumaVideo: "Silent film 1920s style, orthochromatic stock, irregular motion, deep contrast, halation around practical lights, shadow areas block to pure black, uncoated lens soft resolution throughout",
+    plainEnglish: "This should look like a 1920s silent film photograph. Pure black and white with extreme contrast — highlights bloom with a soft halo glow, and shadow areas crush to pure black with zero retained detail. No wood grain visible in dark areas, no texture in shadows — just black. The lens is uncoated, so overall sharpness is soft and slightly dreamlike. There is no modern micro-contrast anywhere in the image. Think Nosferatu, not Instagram vintage.",
+  },
+  {
+    range: [1930, 1939],
+    badge: "Pre-War",
+    name: "Studio System & Shadow",
+    desc: "Hollywood studio system and European Expressionism. Controlled light as narrative. Panchromatic film unlocks the full tonal range.",
+    still: {
+      camera: "Speed Graphic 4×5 / Rolleiflex TLR",
+      cameraDetail: "Press and portrait standard. 4×5 cut film or 120 medium format. Flash powder or bulb.",
+      film: "Kodak Super-XX Panchromatic",
+      filmDetail: "Full tonal range. Renders skin tones naturally. Flash powder creates hard bright light.",
+    },
+    video: {
+      camera: "Mitchell BNC 35mm / Arriflex 35",
+      cameraDetail: "Studio-grade 35mm. Blimped for sync sound. Deep focus possible with small apertures.",
+      film: "Eastman Double-X 5222",
+      filmDetail: "High speed negative. Extreme latitude. Crushed blacks. Visible silver grain in motion.",
+    },
+    lighting: {
+      studio: "Three-point Hollywood glamour. Key, fill, hair light. Controlled shadow ratio.",
+      documentary: "Available light plus portable flash. Photojournalist aesthetic.",
+      surveillance: "N/A.",
+      broadcast: "Early radio era — no broadcast video yet.",
+      home: "Flashbulb snapshot aesthetic. Flat front-lit. Red-eye common.",
+      scientific: "Flat even arc lamp. Technical documentation priority.",
+    },
+    lens: "Early coated optics. Some spherical aberration. Faster lenses used wide open show field curvature.",
+    damages: ["film grain", "flashbulb flare", "silver oxidation", "paper base yellowing", "optical printing double exposure", "vertical scratch lines"],
+    pikaBase: "1930s pre-war era film, panchromatic black and white, studio lighting, deep focus, German Expressionist shadow influence, heavy halation blooming around light sources, mid-tones compress with limited separation, no modern micro-contrast in dark areas",
+    mjBase: "1930s Hollywood studio photograph, panchromatic film, three-point glamour lighting, deep shadow, silver gelatin, halation blooming around lights, compressed mid-tones, no fine detail in shadow areas",
+    fluxBase: "Pre-war 1930s photographic aesthetic, panchromatic film stock, studio controlled lighting, Expressionist shadow, heavy halation around artificial light sources, mid-tone compression, limited shadow detail, early coated optics softness",
+    gptBase: "Photographed in the 1930s on large format panchromatic film. Hollywood studio lighting with strong directional key light and deep shadow fill. Heavy halation blooms around all artificial light sources — neon signs and streetlamps bleed into surrounding areas with no clean edge. Wet surfaces read as pools of light rather than detailed texture. Mid-tones compress with limited tonal separation. Shadow areas retain minimal detail. Early coated optics mean overall resolution is softer than modern rendering — no fine surface texture visible in dark or mid-tone regions.",
+    sdBase: "1930s panchromatic film, Hollywood studio lighting, deep shadow, silver gelatin print, pre-war era, halation around lights, compressed mid-tones, limited shadow detail",
+    ideogramBase: "1930s studio portrait photography style, panchromatic film, Hollywood glamour lighting, deep contrast, halation blooming around light sources, compressed mid-tones",
+    fireflyBase: "Style of 1930s Hollywood film photography, panchromatic emulsion, three-point lighting, deep shadow, heavy halation around artificial lights, no modern surface detail in dark areas",
+    pikaVideo: "1930s cinema footage, panchromatic 35mm, deep focus, studio controlled lighting, Expressionist shadow, Mitchell camera aesthetic, heavy halation around lights, compressed mid-tones, limited shadow detail",
+    klingVideo: "Pre-war 1930s film, panchromatic 35mm stock, Hollywood studio lighting, optical printing artifacts, deep shadow contrast, halation blooming around all light sources, mid-tone compression",
+    runwayVideo: "1930s Hollywood cinema aesthetic, panchromatic film, deep focus, controlled three-point lighting, silver grain, halation around artificial lights, pools of light not detailed wet texture",
+    soraVideo: "1930s studio film footage, panchromatic black and white, Expressionist lighting, deep focus depth of field, heavy halation around light sources, compressed mid-tones",
+    veoVideo: "Pre-war 1930s cinema, panchromatic 35mm, studio lighting control, deep shadow areas, film grain texture, halation blooming around all artificial light sources",
+    lumaVideo: "1930s Hollywood era film stock, panchromatic emulsion, controlled studio lighting, deep focus, Expressionist shadow, heavy halation around lights, limited mid-tone separation",
+    plainEnglish: "This should look like a 1930s film still or Weegee crime photograph. Rich panchromatic black and white with crushed blacks and heavy halation around every artificial light source — neon signs and streetlamps should bloom and bleed, not render with clean edges. Wet surfaces are pools of light, not detailed textures. Mid-tones compress together with limited separation. There is no fine surface detail in dark or mid-tone areas. Think Citizen Kane, a 1938 crime scene photograph, or a rainy New York street shot by a press photographer who had one flashbulb left.",
+  },
+  {
+    range: [1940, 1949],
+    badge: "Wartime & Postwar",
+    name: "Documentary Realism & the War Lens",
+    desc: "War photography redefines documentary. Speed Graphic dominates press. Available light becomes necessity not choice. Images carry weight because the stakes were real.",
+    still: {
+      camera: "Speed Graphic 4×5 / Rolleiflex 2.8A",
+      cameraDetail: "Press standard unchanged but pushed harder. Flashbulb ubiquitous. Available light in combat zones.",
+      film: "Kodak Super-XX / Agfa Isopan Record",
+      filmDetail: "Pushed to the limit in low light. Heavy grain in shadow. Blocked highlights from flashbulb overexposure.",
+    },
+    video: {
+      camera: "Arriflex 16ST / Bell & Howell Eyemo",
+      cameraDetail: "Combat and documentary 16mm. Lightweight enough for frontline use. Spring-wound motor.",
+      film: "Kodak Plus-X Reversal 7276",
+      filmDetail: "High resolution reversal. Fine grain in good light. Coarse and blocked in combat low light.",
+    },
+    lighting: {
+      studio: "Three-point controlled but rationed. War economy affects everything including lighting equipment.",
+      documentary: "Available light entirely. No rig. Combat and reportage — what's there is what you use.",
+      surveillance: "Military reconnaissance photography. Long lens. Available light. High contrast prints.",
+      broadcast: "Radio dominates. No broadcast video yet.",
+      home: "Flashbulb family snapshots. Hard flat light. Slightly overexposed.",
+      scientific: "Military technical documentation. Flat even illumination. Record priority over aesthetics.",
+    },
+    lens: "Coated optics improving but inconsistent. Tessar-type lenses standard. Better corner sharpness than 1930s but still soft wide open.",
+    damages: ["heavy flashbulb blowout", "reversal base fog", "combat handling scratches", "silver oxidation browning", "push processing grain surge", "print spotting marks"],
+    pikaBase: "1940s wartime documentary, panchromatic black and white, available light, Speed Graphic press aesthetic, heavy grain in shadows, flashbulb overexposure in highlights",
+    mjBase: "1940s wartime press photograph, Speed Graphic aesthetic, panchromatic film pushed, heavy shadow grain, flashbulb hard light, silver gelatin print",
+    fluxBase: "1940s documentary wartime aesthetic, pushed panchromatic film, heavy grain, available light reportage, Speed Graphic press camera, flashbulb hard flat light",
+    gptBase: "Photographed in the 1940s on a Speed Graphic press camera with panchromatic film. The image has the wartime documentary look — available light pushed to its limit, heavy grain in shadow areas, flashbulb overexposure flattening highlights. No fine shadow detail. The overall rendering is urgent and unpolished, like a photograph taken because it had to be taken, not because conditions were ideal.",
+    sdBase: "1940s wartime press photography, Speed Graphic, pushed panchromatic, heavy grain, flashbulb light, available light documentary",
+    ideogramBase: "1940s wartime documentary photographic style, Speed Graphic press camera, pushed panchromatic film, heavy shadow grain, flashbulb highlights",
+    fireflyBase: "Style of 1940s wartime press photography, Speed Graphic aesthetic, pushed panchromatic film, heavy grain, flashbulb hard light",
+    pikaVideo: "1940s wartime documentary 16mm, Arriflex 16ST, available light, heavy grain, combat documentary aesthetic, reversal film base",
+    klingVideo: "1940s documentary 16mm, wartime aesthetic, pushed reversal film, heavy shadow grain, available light, Bell & Howell Eyemo movement",
+    runwayVideo: "1940s wartime documentary footage, 16mm reversal, heavy grain, available light only, combat reportage aesthetic, urgent unpolished movement",
+    soraVideo: "1940s wartime 16mm documentary, reversal film, heavy grain in shadows, available light aesthetic, urgent reportage movement",
+    veoVideo: "1940s documentary 16mm, wartime aesthetic, pushed reversal film, heavy shadow grain, Spring-wound camera movement, available light",
+    lumaVideo: "1940s wartime documentary footage, 16mm reversal film, heavy grain, available light, urgent handheld movement, combat reportage aesthetic",
+    plainEnglish: "This should look like a 1940s press or wartime documentary photograph — panchromatic film pushed past its limits, heavy grain especially in shadows, flashbulb light that flattens and overexposes highlights. Nothing is pretty. The image exists because something needed to be documented, not because the light was good. Think Robert Capa, Life Magazine war coverage, or a VJ Day celebration photograph.",
+  },
+  {
+    range: [1945, 1959],
+    badge: "Postwar",
+    name: "Postwar Optimism & Cold War Dread",
+    desc: "Color film arrives for consumers. Kodachrome saturates the American dream. Documentary cinema goes handheld. Two aesthetics coexist.",
+    still: {
+      camera: "Leica M3 / Nikon S2 / Rolleiflex 2.8",
+      cameraDetail: "35mm rangefinder or medium format TLR. Street photography era begins. Decisive moment.",
+      film: "Kodachrome 25 / Kodak Tri-X 400",
+      filmDetail: "Kodachrome: saturated primaries, stable colors. Tri-X: fast, contrasty, photojournalist standard.",
+    },
+    video: {
+      camera: "Bolex H16 / Arriflex 16ST",
+      cameraDetail: "16mm sync-sound capable. Postwar documentary standard. Used by NASA, military, ethnographers.",
+      film: "Kodak Plus-X Reversal 7276",
+      filmDetail: "Reversal process: positive image direct from camera. High resolution. Slight warm base.",
+    },
+    lighting: {
+      studio: "High-key optimistic. American advertising aesthetic. Bright, even, aspirational.",
+      documentary: "Available light. Window light bounce. No artificial rig. Reportage priority.",
+      surveillance: "Surveillance photography begins — long lens, available light, grainy.",
+      broadcast: "Early TV: flat fluorescent studio. Harsh face lighting for cathode ray reproduction.",
+      home: "Kodachrome family snapshots. Flash cube. Overexposed daylight scenes.",
+      scientific: "Tungsten controlled. Flat even illumination. Record-keeping priority.",
+    },
+    lens: "First-generation coated optics. Cleaner than prewar but characteristic color fringing at edges. Leitz and Zeiss character.",
+    damages: ["Kodachrome fading", "color shift cyan-green", "reversal dupe artifacts", "sprocket edge creep", "base fog", "print scratches"],
+    pikaBase: "1950s postwar era, Kodachrome color palette, warm saturated primaries, 16mm documentary aesthetic",
+    mjBase: "1950s Kodachrome photograph, saturated warm colors, postwar American aesthetic, clean grain structure",
+    fluxBase: "Postwar 1950s photographic aesthetic, Kodachrome color science, warm saturated palette, 35mm rangefinder grain",
+    gptBase: "Photographed in the 1950s on Kodachrome film. Saturated warm primary colors with stable blues and deep reds. The image has the clean optimistic look of postwar American photography — bright, slightly over-saturated, with fine grain.",
+    sdBase: "1950s Kodachrome, warm saturated colors, postwar Americana, 35mm film grain, vintage color photograph",
+    ideogramBase: "1950s Kodachrome photographic style, postwar color palette, warm saturated primaries, clean grain",
+    fireflyBase: "Style of 1950s Kodachrome photography, warm saturated colors, postwar American aesthetic, fine film grain",
+    pikaVideo: "1950s documentary 16mm footage, Kodak Plus-X reversal stock, postwar aesthetic, available light, slight warm color base",
+    klingVideo: "Postwar 1950s 16mm reversal film, Kodachrome-adjacent color science, documentary movement, institutional record aesthetic",
+    runwayVideo: "1950s newsreel and documentary aesthetic, 16mm reversal stock, warm color bias, Bolex camera grain structure",
+    soraVideo: "1950s postwar documentary footage, 16mm reversal film, Kodachrome warm palette, civic documentary aesthetic",
+    veoVideo: "1950s 16mm documentary film, reversal stock, postwar color science, available light handheld movement",
+    lumaVideo: "Postwar 1950s 16mm reversal aesthetic, warm saturated color, documentary handheld, institutional film grain",
+    plainEnglish: "This should look like 1950s Kodachrome — warm, saturated, almost too optimistic. Reds are deep, blues are stable, skin tones are warm. Or if black and white: photojournalist Tri-X grain — contrasty, decisive moment energy. Think Life Magazine or early NASA documentation film.",
+  },
+  {
+    range: [1960, 1969],
+    badge: "Space Age",
+    name: "The Space Age & New Wave",
+    desc: "16mm goes cinema. French New Wave and Direct Cinema rewrite visual language. NASA films everything. Kodachrome peaks.",
+    still: {
+      camera: "Nikon F / Canon F-1 / Hasselblad 500C",
+      cameraDetail: "SLR system cameras arrive. Interchangeable lenses. TTL metering. Hasselblad goes to the moon.",
+      film: "Kodachrome II / Ektachrome EF / Tri-X",
+      filmDetail: "Kodachrome II: finest grain color ever made. Ektachrome: pushable to 400. Tri-X: street photography standard.",
+    },
+    video: {
+      camera: "Éclair NPR / Arriflex 16BL",
+      cameraDetail: "Crystal sync 16mm. Lightweight. Shoulder-mounted. Direct Cinema and cinéma vérité standard camera.",
+      film: "Kodak 7242 Ektachrome / 7231 Plus-X",
+      filmDetail: "7242: saturated reversal. 7231: fine grain negative. NASA documentation standard.",
+    },
+    lighting: {
+      studio: "Mixed: advertising uses hard pop-art color. Art film uses extreme chiaroscuro.",
+      documentary: "Purely available light. Direct Cinema doctrine: no added lighting. What's there is what you use.",
+      surveillance: "Government surveillance: long lens, telephoto compression, available light grain.",
+      broadcast: "Color TV begins. Studio fluorescent plus fresnel spots. Unnatural saturated color for CRT.",
+      home: "Flash cube snapshots. Holiday color slides. Kodachrome birthday parties.",
+      scientific: "NASA documentation: flat, even, methodical. Every detail legible.",
+    },
+    lens: "Modern multicoated optics beginning. Nikkor and Zeiss precision. Some characteristic flare from early coatings. Telephoto compression prevalent.",
+    damages: ["Kodachrome color shift red-orange", "magnetic sync audio drift", "reversal base cyan shift", "edge numbering visible", "splice pop", "acetate base curl"],
+    pikaBase: "1960s Space Age, 16mm Kodachrome color palette, New Wave cinema aesthetic, direct cinema handheld, saturated primaries",
+    mjBase: "1960s Kodachrome photograph, Space Age aesthetic, rich saturated color, fine grain, New Wave composition",
+    fluxBase: "1960s Space Age photographic aesthetic, Kodachrome II color science, rich saturated palette, 16mm documentary grain",
+    gptBase: "Photographed in the 1960s on Kodachrome II or Ektachrome film. The color palette is cool and institutional — fluorescent lighting renders with a slight green-cyan cast, not warm brown or orange. No modern cinematic color grading. No heavy vignette. No horror or gritty treatment. This is a bureaucratic, optimistic Space Age aesthetic — clean, cold, purposeful. Fine grain. Stable blues. Slightly desaturated greens. The image looks like it belongs in a 1964 NASA facility report, not a film noir.",
+    sdBase: "1960s Kodachrome, Space Age color, direct cinema aesthetic, rich saturation, fine grain, 16mm",
+    ideogramBase: "1960s Space Age photographic style, Kodachrome II color palette, New Wave composition, rich grain",
+    fireflyBase: "Style of 1960s Kodachrome photography, Space Age palette, direct cinema aesthetic, rich color saturation",
+    pikaVideo: "1960s direct cinema 16mm, Éclair NPR camera aesthetic, Kodachrome saturated color, handheld verité movement, available light",
+    klingVideo: "Space Age 1960s 16mm cinema, Kodachrome color science, direct cinema handheld, New Wave movement, available light grain",
+    runwayVideo: "1960s cinéma vérité 16mm, Éclair NPR camera movement, saturated Kodachrome palette, documentary handheld aesthetic",
+    soraVideo: "1960s New Wave cinema footage, 16mm Ektachrome reversal, direct cinema movement, Space Age color palette",
+    veoVideo: "1960s direct cinema 16mm, Kodachrome color science, verité handheld movement, available light, fine grain reversal",
+    lumaVideo: "Space Age 1960s 16mm reversal film, Kodachrome saturation, direct cinema movement, institutional documentary grain",
+    plainEnglish: "This should look like 1960s Kodachrome at its peak — colors so saturated they almost vibrate. Reds are slightly warm, blues are pure and deep. The grain is invisible in good light but appears in shadows. Movement is handheld but purposeful, not shaky. Think NASA mission footage, A Hard Day's Night, or early Godard.",
+  },
+  {
+    range: [1970, 1979],
+    badge: "New Hollywood",
+    name: "Grit, Grain & New Hollywood",
+    desc: "Film pushed to its limits. Available light replaces studio glamour. Paranoid America shoots from the hip. Grain becomes aesthetics.",
+    still: {
+      camera: "Nikon F2 / Leica M4 / Olympus OM-1",
+      cameraDetail: "Smaller, faster, mechanical. Pushed film in low light. Documentary and editorial standard.",
+      film: "Tri-X 400 pushed to 1600 / Ektachrome 160T",
+      filmDetail: "Pushed Tri-X: massive grain, blocked shadows, bleached highlights. Tungsten Ektachrome: warm interior color.",
+    },
+    video: {
+      camera: "Aaton 7 / CP-16R / Éclair ACL",
+      cameraDetail: "Ultra-lightweight 16mm. Shoulder-mounted like a rifle. Cinema verité and guerrilla cinema.",
+      film: "Kodak 7247 / Fuji 8511",
+      filmDetail: "Pushed tungsten negative. Muddy shadow color. Orange-brown cast in low light. Visible gate weave.",
+    },
+    lighting: {
+      studio: "Motivated source lighting. No unnatural fill. Practical sources visible in frame.",
+      documentary: "Available light doctrine intensifies. Underexposed, pushed, grainy.",
+      surveillance: "Magnetic stripe 16mm. Long lens. Government paranoia aesthetic.",
+      broadcast: "Color news: available light exterior, fluorescent interior. Uneven color temperature.",
+      home: "Super 8 home movies. Kodachrome 40. Available light indoors, low frame rate.",
+      scientific: "Cine-scientific: clinical fluorescent. Flat. Slightly green cast.",
+    },
+    lens: "Fast lenses opened up. Aberrations accepted as part of the image. Anamorphic flares in theatrical work. Long telephoto compression.",
+    damages: ["heavy pushed grain", "shadow color mudding", "gate weave", "magnetic stripe dropout", "tungsten color cast orange-brown", "acetate warp"],
+    pikaBase: "1970s New Hollywood, pushed 16mm grain, gritty available light, tungsten color cast, verité handheld movement",
+    mjBase: "1970s film photography, pushed Tri-X grain, available light, New Hollywood grit, editorial aesthetic",
+    fluxBase: "1970s New Hollywood photographic aesthetic, pushed grain, muddy shadow color, tungsten warmth, guerrilla cinema grain",
+    gptBase: "Photographed in the 1970s on pushed Tri-X or tungsten Ektachrome. Heavy visible grain in all areas. Shadow areas are muddy with an orange-brown cast. The image has the raw, unpolished look of 1970s documentary and New Hollywood cinema — nothing pretty, everything real.",
+    sdBase: "1970s pushed film grain, New Hollywood aesthetic, available light, tungsten color cast, gritty documentary",
+    ideogramBase: "1970s New Hollywood photographic style, pushed grain texture, gritty available light, warm shadow cast",
+    fireflyBase: "Style of 1970s New Hollywood photography, heavy film grain, available light, warm tungsten cast, gritty aesthetic",
+    pikaVideo: "1970s guerrilla cinema 16mm, pushed Kodak 7247, heavy grain, gate weave, available light, tungsten color mudding",
+    klingVideo: "New Hollywood 1970s 16mm, pushed tungsten negative, heavy grain structure, handheld movement, muddy shadow color",
+    runwayVideo: "1970s cinema verité 16mm, Aaton camera aesthetic, pushed grain, tungsten cast, documentary handheld movement",
+    soraVideo: "1970s New Hollywood footage, pushed 16mm grain, tungsten color cast, available light grit, gate weave artifacts",
+    veoVideo: "1970s guerrilla cinema, pushed 16mm stock, heavy grain, available light, warm tungsten shadow, magnetic stripe era",
+    lumaVideo: "New Hollywood 1970s 16mm, pushed grain, muddy shadows, tungsten warmth, verité movement, raw documentary aesthetic",
+    plainEnglish: "This should look like a 1970s film photograph shot under pressure — heavy grain you can see in the sky, shadows that go muddy orange-brown instead of black, underexposed but full of atmosphere. Think The French Connection, Serpico, Chinatown, or a late-70s protest photograph.",
+  },
+  {
+    range: [1980, 1989],
+    badge: "Tape Era",
+    name: "Neon & the Tape Machine",
+    desc: "Video replaces film for broadcast and consumer use. Two aesthetics diverge: cinematic film versus the warm glow of VHS. Both define a decade.",
+    still: {
+      camera: "Canon AE-1 Program / Nikon FM2 / Minolta X-700",
+      cameraDetail: "Consumer SLR golden age. Auto exposure begins. Compact and accessible.",
+      film: "Fuji Velvia 50 / Kodak Gold 200 / Kodacolor",
+      filmDetail: "Velvia: hyper-saturated. Oversaturated greens and reds. Color print film: warm, slightly hazy.",
+    },
+    video: {
+      camera: "Sony Betacam SP / JVC GR-C1 / RCA CC010",
+      cameraDetail: "Broadcast Betacam SP versus first consumer camcorders. Tape oxide. Component signal.",
+      film: "Betacam SP / VHS oxide tape",
+      filmDetail: "Betacam: broadcast resolution. VHS: horizontal resolution loss, color bleed at edges, tape hiss.",
+    },
+    lighting: {
+      studio: "Gelled theatrical. Neon bounce. High contrast color. Music video saturated.",
+      documentary: "Available light plus portable video light. Harsh on-camera light.",
+      surveillance: "Early CCTV. Black and white. Fixed wide angle. Burned-in timestamp.",
+      broadcast: "Color broadcast: mixed source. On-camera video light. Harsh key, no fill.",
+      home: "On-camera camcorder light. Harsh flash. Holiday party basement lighting.",
+      scientific: "Fluorescent lab standard. Slight green color cast. Flat and even.",
+    },
+    lens: "Multi-coated modern. Clean rendition. Video lenses: zoom-heavy, soft at wide end. VHS lenses: poor resolution, chromatic aberration.",
+    damages: ["VHS tracking error bands", "tape oxide dropout", "color edge bleeding", "horizontal noise bands", "VHS chroma noise", "betacam dropout lines"],
+    pikaBase: "1980s VHS and Betacam era, tape oxide aesthetic, neon color palette, video grain, horizontal noise artifacts",
+    mjBase: "1980s film photograph, Fuji Velvia hyper-saturation, neon color palette, consumer film aesthetic",
+    fluxBase: "1980s tape era aesthetic, VHS color bleed, neon palette, consumer camcorder grain, betacam broadcast quality",
+    gptBase: "Captured in the 1980s on consumer VHS or Betacam SP video. Colors are warm and slightly oversaturated with neon accents bleeding at high-contrast edges. The image has soft horizontal resolution. There may be faint tracking noise bands. The overall feel is warm, slightly hazy, and unmistakably 1980s.",
+    sdBase: "1980s VHS aesthetic, tape noise, neon color, horizontal resolution loss, consumer video, betacam broadcast",
+    ideogramBase: "1980s VHS and tape aesthetic, neon color palette, consumer video grain, horizontal noise bands",
+    fireflyBase: "Style of 1980s VHS video or film photography, neon saturated colors, tape artifacts, warm consumer aesthetic",
+    pikaVideo: "1980s VHS camcorder footage, tape oxide dropout, horizontal noise bands, neon color bleed, betacam resolution",
+    klingVideo: "1980s broadcast and consumer video, Betacam SP or VHS, tape tracking artifacts, neon color palette, video grain",
+    runwayVideo: "1980s VHS aesthetic, tape oxide dropout, horizontal noise bands, consumer camcorder movement, neon color bleed",
+    soraVideo: "1980s VHS footage, tape degradation artifacts, consumer camcorder aesthetic, neon warm color palette",
+    veoVideo: "1980s consumer video era, VHS or Betacam, tape dropout artifacts, neon color bleed, horizontal noise bands",
+    lumaVideo: "VHS and Betacam 1980s, tape oxide aesthetic, neon color palette, consumer camcorder movement, tracking noise",
+    plainEnglish: "This should look like 1980s VHS tape — slightly soft horizontal resolution, colors that bleed at edges, a warm hazy overall tone with pops of neon. If it's a film photo: Fuji Velvia hyper-saturation, everything slightly too vivid. Think home video, a music video, or a parking lot at 2am in 1986.",
+  },
+  {
+    range: [1990, 1999],
+    badge: "Early Digital",
+    name: "Hi8, DV & the Long Goodbye to Analog",
+    desc: "Digital compression enters. MiniDV creates the found footage era. Hi8 bridges the gap. The timestamp is burned in forever.",
+    still: {
+      camera: "Nikon N90s / Canon EOS 5 / Early digital: Apple QuickTake",
+      cameraDetail: "Late analog SLR and earliest consumer digital. Digital files are 640×480 with massive JPEG artifacts.",
+      film: "Kodak Gold 400 / Fuji Superia / early JPEG",
+      filmDetail: "Color print film: warm, slightly soft. Early digital: JPEG compression blocks visible, palette limited.",
+    },
+    video: {
+      camera: "Sony Hi8 CCD-TR / Canon GL1 DV / Sony VX1000",
+      cameraDetail: "Hi8 analog and MiniDV digital. Long continuous recording. Low-light performance poor. Sony VX1000 became the DV cinema standard.",
+      film: "Hi8 magnetic tape / MiniDV DV codec",
+      filmDetail: "Hi8: better than VHS, worse than Betacam. DV: digital compression macro-blocking in motion, timestamp overlay burned in corner.",
+    },
+    lighting: {
+      studio: "Early digital grading arrives. Day-for-night effects. Color grading replaces lighting.",
+      documentary: "DV documentary: pure available light. No rig possible. AGC audio pumps.",
+      surveillance: "CCTV standard: wide angle, low res, timestamp, B&W or washed color.",
+      broadcast: "News standard: ENG camera with on-camera light. Aggressive in-camera sharpening.",
+      home: "Consumer camcorder: on-camera light, automatic everything, timestamp always on.",
+      scientific: "DV documentation: small sensor, clinical color, automatic focus hunting.",
+    },
+    lens: "Consumer zoom lenses: soft wide, acceptable tele. Digital era: auto-focus breathing visible. Chromatic aberration uncorrected.",
+    damages: ["DV macro-blocking", "timestamp burn overlay", "AGC audio pump", "auto-focus hunting", "digital compression artifacts", "Hi8 luminance noise", "interlace comb artifacts"],
+    pikaBase: "late 1990s DV and Hi8 footage, digital compression macro-blocking, consumer camcorder aesthetic, low-light noise",
+    mjBase: "1990s consumer photograph, Kodak Gold grain, warm soft color, late analog era, slightly faded",
+    fluxBase: "Late 1990s digital and Hi8 video aesthetic, DV compression artifacts, consumer camcorder quality, warm degraded color",
+    gptBase: "Filmed in the late 1990s on MiniDV or Hi8. Digital compression creates macro-block artifacts in areas of motion. The image is slightly soft with automatic exposure adjustments creating pumping brightness changes. There may be a burned-in timestamp in the corner. The color is flat and cool compared to earlier analog formats.",
+    sdBase: "1990s DV camcorder, digital compression artifacts, Hi8 aesthetic, consumer video, timestamp overlay, low-light noise",
+    ideogramBase: "late 1990s DV and Hi8 video aesthetic, digital compression blocks, consumer camcorder, timestamp burned in",
+    fireflyBase: "Style of late 1990s DV camcorder footage, digital compression artifacts, consumer video aesthetic, Hi8 grain",
+    pikaVideo: "late 1990s MiniDV footage, digital compression macro-blocking, AGC audio pumping, consumer camcorder movement, timestamp overlay",
+    klingVideo: "1990s Hi8 and DV era, consumer camcorder aesthetic, digital compression artifacts, automatic exposure, timestamp burn",
+    runwayVideo: "Late 1990s DV camcorder footage, macro-block compression artifacts, low-light consumer aesthetic, AGC breathing",
+    soraVideo: "1990s MiniDV aesthetic, digital compression artifacts, consumer camcorder movement, timestamp overlay, Hi8 color",
+    veoVideo: "Late 1990s DV and Hi8, digital compression blocks, consumer camcorder movement, automatic exposure, low-light noise",
+    lumaVideo: "1990s consumer DV camcorder, macro-block artifacts, Hi8 aesthetic, timestamp burned in corner, AGC audio pump",
+    plainEnglish: "This should look like 1990s MiniDV or Hi8 — slightly soft, with digital compression blocks appearing in areas of movement. Colors are flat compared to film. Brightness pumps automatically. The timestamp might be burned in the corner. Think The Blair Witch Project, home video Christmas tapes, or early YouTube era footage.",
+  },
+  {
+    range: [2000, 2004],
+    badge: "Y2K Digicam",
+    name: "Early Digital & the 2-Megapixel Era",
+    desc: "Consumer digital cameras arrive but can barely resolve a face. JPEG compression is brutal. Colors are simultaneously washed and oversaturated. Nothing looks quite real.",
+    still: {
+      camera: "Canon PowerShot G2 / Sony Cybershot DSC-F707",
+      cameraDetail: "2–5 megapixel CCD sensors. Fixed or limited zoom lens. Slow write speeds. CompactFlash or Memory Stick.",
+      film: "CCD sensor / in-camera JPEG",
+      filmDetail: "Small CCD with aggressive noise reduction. Waxy skin tones. Heavy JPEG compression blocks at ISO 400+.",
+    },
+    video: {
+      camera: "Sony DCR-TRV30 MiniDV / Canon Elura 40MC",
+      cameraDetail: "MiniDV standard. 1CCD. 480i interlaced. On-camera microphone only. Night Shot infrared mode.",
+      film: "MiniDV tape / DV codec 25Mbps",
+      filmDetail: "DV codec holds at good light but blocks in shadow and motion. Interlace comb on fast movement.",
+    },
+    lighting: {
+      studio: "Early digital studio: mixed tungsten and fluorescent. In-camera white balance shifts color unpredictably.",
+      documentary: "Available light only. CCD struggles below 200 ISO. Dark scenes go blocky and noise-crushed.",
+      surveillance: "Early IP camera era begins. Low resolution. High compression. Color or B&W. Clock display burned in.",
+      broadcast: "DV broadcast: prosumer cameras in news. Slightly soft. Aggressive in-camera sharpening halo.",
+      home: "Fully automatic everything. Built-in flash. Red-eye. Slow shutter in low light creates motion smear.",
+      scientific: "Early digital lab documentation. Flat color. Macro capability limited. White balance inconsistent.",
+    },
+    lens: "Fixed or 3x optical zoom. Significant barrel distortion at wide end. Chromatic aberration at edges. No optical stabilization.",
+    damages: ["JPEG compression blocks", "CCD color noise", "waxy noise reduction skin", "barrel distortion", "chromatic aberration fringing", "blown highlights no recovery", "interlace comb on motion"],
+    pikaBase: "early 2000s digicam aesthetic, Y2K digital camera, CCD sensor color, heavy JPEG compression, 2-megapixel era",
+    mjBase: "early 2000s digital photograph, Canon PowerShot CCD, Y2K color palette, JPEG compression artifacts, digicam aesthetic",
+    fluxBase: "Y2K era digicam aesthetic, early digital CCD color science, JPEG compression, waxy noise reduction, 2000s digital photography",
+    gptBase: "Photographed in the early 2000s on a consumer digital camera with a small CCD sensor. The image has the characteristic Y2K digicam look: slightly washed-out colors, waxy noise-reduced skin tones, heavy JPEG compression in shadow areas, and blown highlights with no detail recovery.",
+    sdBase: "Y2K digicam, early 2000s digital camera, CCD sensor, JPEG artifacts, waxy skin, blown highlights",
+    ideogramBase: "early 2000s digicam photographic style, Y2K CCD color, JPEG compression aesthetic, 2-megapixel era",
+    fireflyBase: "Style of early 2000s consumer digital photography, Y2K digicam CCD color, JPEG compression blocks, waxy aesthetic",
+    pikaVideo: "early 2000s MiniDV footage, DV codec compression, interlaced video, Y2K camcorder aesthetic, CCD color",
+    klingVideo: "Y2K era MiniDV camcorder, DV codec 25Mbps, interlace artifacts on motion, on-camera mic audio, 480i resolution",
+    runwayVideo: "Early 2000s DV camcorder footage, MiniDV aesthetic, interlaced 480i, DV compression blocks, Y2K color palette",
+    soraVideo: "2000-2004 MiniDV footage, DV codec compression, interlace comb on movement, Y2K consumer camcorder aesthetic",
+    veoVideo: "Early 2000s DV camcorder, MiniDV tape, interlaced 480i, JPEG-like DV compression, Y2K video aesthetic",
+    lumaVideo: "Y2K MiniDV camcorder footage, DV codec, interlace artifacts, consumer camcorder movement, early digital color",
+    plainEnglish: "This should look like a photo taken on a $300 digital camera in 2002 — slightly washed out, with skin that looks waxy because the noise reduction is too aggressive. Shadows block up into JPEG mush. Highlights blow out with no warning. The color is real but slightly off, like a memory that's almost right. Think MySpace profile pics, early blog photography, family Christmas 2001.",
+  },
+  {
+    range: [2005, 2009],
+    badge: "Mid-2000s DSLR",
+    name: "DSLR Democracy & YouTube Zero",
+    desc: "The Canon Rebel democratizes the DSLR. Megapixels multiply. YouTube launches in 2005. The visual language of the internet is born in this era.",
+    still: {
+      camera: "Canon EOS Rebel XT / Nikon D70 / Canon 5D (2005)",
+      cameraDetail: "6–12 megapixel APS-C sensors. Interchangeable lenses. RAW files available but JPEGs dominant. First full-frame DSLRs arrive.",
+      film: "Canon DIGIC II / Nikon EXPEED / in-camera JPEG",
+      filmDetail: "Better than early digicam but still over-sharpened. Sensor noise becomes grain-like at ISO 800+. Color science improving but still clinical.",
+    },
+    video: {
+      camera: "Sony HDV / Canon HV20 / Flip Ultra",
+      cameraDetail: "HDV 1080i arrives. Flip cam makes video totally frictionless. Still tape-based or early flash storage.",
+      film: "HDV tape / H.264 early codec / Flip MPEG-4",
+      filmDetail: "HDV: compressed 1080i with MPEG-2 artifacts in motion. Flip: heavily compressed, soft, democratic. Early H.264 struggles with grain.",
+    },
+    lighting: {
+      studio: "Strobist era begins — off-camera flash via cheap radio triggers. Hard dramatic light becomes accessible.",
+      documentary: "DSLR documentary begins. Available light plus fast primes. Shallow depth of field as identity.",
+      surveillance: "IP camera standard: color at day, IR B&W at night. Motion-triggered. Clock overlay.",
+      broadcast: "HD broadcast standard. ENG cameras go HDV. Slightly over-sharpened in-camera.",
+      home: "Point-and-shoot proliferates. Auto HDR begins. Camera phone quality still poor but growing.",
+      scientific: "DSLR replaces film in scientific documentation. Better dynamic range but over-processed JPEG standard.",
+    },
+    lens: "Kit lenses: soft corners, heavy barrel distortion. Fast primes becoming popular. First image stabilization in lenses. Bokeh becomes a marketing term.",
+    damages: ["HDV MPEG-2 motion artifacts", "over-sharpening halo", "noise at ISO 800+", "kit lens corner softness", "heavy vignette", "over-saturated in-camera JPEG", "banding in gradients"],
+    pikaBase: "mid-2000s DSLR aesthetic, Canon Rebel era, HDV video quality, early YouTube visual language, 2005-2009",
+    mjBase: "mid-2000s DSLR photograph, Canon Rebel XT aesthetic, over-sharpened JPEG, slightly clinical color, 2000s photography",
+    fluxBase: "2005-2009 DSLR era aesthetic, Canon Rebel color science, over-sharpened detail, HDV video quality, early HD era",
+    gptBase: "Photographed in 2005–2009 on a consumer DSLR like the Canon Rebel XT. The image has the characteristic mid-2000s look: slightly over-sharpened edges, clinical but improving color, heavy in-camera JPEG processing, and that slightly unnatural crispness that early DSLRs produced.",
+    sdBase: "mid-2000s DSLR, Canon Rebel era, over-sharpened JPEG, 2000s photography aesthetic, HDV video quality",
+    ideogramBase: "2005-2009 consumer DSLR photographic style, Canon Rebel aesthetic, over-sharpened color, early digital SLR",
+    fireflyBase: "Style of 2005-2009 DSLR photography, Canon Rebel era color science, slightly over-processed, early HD aesthetic",
+    pikaVideo: "mid-2000s HDV footage, Canon HV20 or Sony HDV, MPEG-2 motion artifacts, 1080i interlaced, early YouTube aesthetic",
+    klingVideo: "2005-2009 HDV camcorder, early HD 1080i, MPEG-2 compression artifacts, consumer HD video aesthetic",
+    runwayVideo: "Mid-2000s HDV footage, 1080i interlaced, MPEG-2 artifacts in motion, early YouTube video aesthetic, consumer HD",
+    soraVideo: "2005-2009 HDV camcorder footage, early HD aesthetic, MPEG-2 compression, 1080i interlace, consumer video quality",
+    veoVideo: "Mid-2000s HDV video, 1080i interlaced, MPEG-2 motion compression, early YouTube visual quality, consumer HD era",
+    lumaVideo: "2005-2009 HDV aesthetic, early HD 1080i, MPEG-2 artifacts, consumer camcorder movement, YouTube zero era",
+    plainEnglish: "This should look like a mid-2000s DSLR photo — technically competent but slightly clinical and over-sharpened. Colors are real but processed in-camera to pop a little too much. There's a certain crispness that feels slightly artificial. Or for video: early YouTube — heavily compressed, slightly soft, 480p uploaded from HDV. Think 2007 photography blogs, early Flickr, the first generation of people who called themselves photographers because they owned a Rebel.",
+  },
+  {
+    range: [2010, 2014],
+    badge: "Instagram Era",
+    name: "VSCO, Instagram & the Filter Wars",
+    desc: "iPhone 4 changes everything. Instagram launches 2010. VSCO redefines how a generation processes images. The mirrorless revolution begins. Shallow depth of field is everywhere.",
+    still: {
+      camera: "iPhone 4 / Canon 5D Mark II / Sony NEX-5",
+      cameraDetail: "iPhone 4 brings retina display and competent camera together. Canon 5D Mk II defines DSLR video. Sony NEX launches mirrorless. Instagram square format dominates.",
+      film: "BSI CMOS sensor / iPhone ISP / VSCO filter stack",
+      filmDetail: "Smartphone sensors improve dramatically. In-camera processing fights noise aggressively. VSCO filters simulate film stocks that feel more real than the real thing.",
+    },
+    video: {
+      camera: "Canon 5D Mark II / GoPro Hero 2 / iPhone 4",
+      cameraDetail: "5D Mk II DSLR video redefines indie film. GoPro introduces action POV aesthetic. iPhone video becomes legitimate documentary tool.",
+      film: "H.264 1080p / GoPro fisheye / iPhone 720p-1080p",
+      filmDetail: "H.264 at 1080p holds well but struggles with grain and fine detail. GoPro introduces ultra-wide fisheye as a visual signature. iPhone video slightly over-sharpened.",
+    },
+    lighting: {
+      studio: "LED panels replace tungsten. Portable, color-tunable, flat. Natural light aesthetics dominate commercial work.",
+      documentary: "Natural light obsession. Window light, golden hour. Shallow depth of field as cinematic signifier.",
+      surveillance: "HD IP cameras standard. Night vision IR. Motion detection clips. Cloud storage begins.",
+      broadcast: "HD broadcast fully standard. Multi-camera live production. Drone footage begins appearing.",
+      home: "iPhone becomes the primary camera. Selfie culture begins. Square crop dominates. VSCO presets everywhere.",
+      scientific: "Mirrorless cameras enter lab. Better video for documentation. Time-lapse becomes standard.",
+    },
+    lens: "Vintage lens revival on mirrorless. Helios 44, Super Takumars. Swirly bokeh aesthetic. GoPro ultra-wide fisheye. iPhone single fixed lens.",
+    damages: ["VSCO filter color shift", "faded lifted blacks", "heavy vignette added in post", "over-processed HDR halo", "GoPro fisheye distortion", "Instagram square crop", "over-sharpened smartphone detail"],
+    pikaBase: "2010-2014 Instagram era aesthetic, VSCO filter color grading, iPhone 4 camera quality, shallow depth of field obsession, golden hour natural light",
+    mjBase: "2010-2014 Instagram photograph, VSCO film filter aesthetic, faded lifted blacks, shallow depth of field, golden hour, 5D Mark II look",
+    fluxBase: "Instagram era 2010-2014 aesthetic, VSCO filter color science, lifted blacks, shallow depth of field, golden hour photography",
+    gptBase: "Photographed in 2010–2014 with an iPhone 4 or Canon 5D Mark II. The image has the Instagram era look: slightly faded lifted blacks from VSCO presets, warm golden hour color grading, heavy shallow depth of field, and that over-processed but nostalgic quality that defined early Instagram photography.",
+    sdBase: "2010-2014 Instagram era, VSCO filter aesthetic, faded blacks, golden hour, shallow depth of field, iPhone 4 quality",
+    ideogramBase: "2010-2014 Instagram photographic style, VSCO filter color grading, faded aesthetic, golden hour, shallow depth",
+    fireflyBase: "Style of 2010-2014 Instagram photography, VSCO film filter aesthetic, lifted blacks, warm color grade, golden hour",
+    pikaVideo: "2010-2014 DSLR video aesthetic, Canon 5D Mark II look, shallow depth of field, natural light, H.264 1080p",
+    klingVideo: "2010-2014 DSLR video, 5D Mark II shallow depth of field, warm color grade, natural light documentary, H.264 1080p",
+    runwayVideo: "Instagram era 2010-2014 video, DSLR shallow depth of field, warm color grade, GoPro action aesthetic, natural light",
+    soraVideo: "2010-2014 DSLR and iPhone video, shallow depth of field, warm Instagram color grade, golden hour aesthetic",
+    veoVideo: "2010-2014 DSLR video aesthetic, Canon 5D Mk II look, shallow depth, natural light, H.264 1080p color science",
+    lumaVideo: "Instagram era 2010-2014, DSLR shallow depth of field, VSCO-adjacent color grade, golden hour, natural light documentary",
+    plainEnglish: "This should look like early Instagram — faded blacks that never quite reach zero, warm skin tones, shallow depth of field on everything, golden hour as a default setting rather than a special occasion. VSCO A4 or Kodak Portra simulation. There's a wistfulness to this era that's half nostalgia, half over-processing. Think Tumblr photography, early food Instagram, music festival photos from 2012.",
+  },
+  {
+    range: [2015, 2019],
+    badge: "Modern Mirrorless",
+    name: "4K, Drones & the Mirrorless Revolution",
+    desc: "Sony A7 series redefines full-frame. 4K video becomes standard. DJI drones put cinematic aerials in everyone's hands. The look becomes technically near-perfect — which is its own problem.",
+    still: {
+      camera: "Sony A7R II / Fujifilm X-T2 / iPhone 7 Plus",
+      cameraDetail: "42-megapixel full-frame mirrorless. Fuji X-Trans sensor with film simulation modes. iPhone introduces dual camera and Portrait Mode computational bokeh.",
+      film: "BSI CMOS full-frame / Fuji film simulations / computational iPhone",
+      filmDetail: "Fuji film simulations (Velvia, Classic Chrome, Eterna) become sought-after. iPhone computational photography begins replacing optical reality. Sony files are clean to absurdity.",
+    },
+    video: {
+      camera: "Sony A7S II / DJI Phantom 3 / GH5 / iPhone 7",
+      cameraDetail: "Sony A7S II shoots 4K with extraordinary low light. DJI makes drone aerials affordable. Panasonic GH5 brings 10-bit 4K to indie filmmakers. iPhone 7 shoots 4K 60fps.",
+      film: "4K H.264/H.265 / S-Log2 / D-Log / Rec.709",
+      filmDetail: "Log profiles capture maximum dynamic range for grading. 10-bit color becomes accessible. 4K delivery standard. Drone footage introduces God's-eye-view as common visual vocabulary.",
+    },
+    lighting: {
+      studio: "LED bi-color standard. RGB LEDs for colored light. Aputure and similar affordable pro gear. Clean, controllable, cool-running.",
+      documentary: "Gimbal-stabilized handheld — motion becomes silky smooth. Natural light plus portable LED panel. The 'cinematic look' becomes accessible to everyone.",
+      surveillance: "4K IP camera standard. AI motion detection. Color night vision. Facial recognition integration begins.",
+      broadcast: "4K broadcast begins. Drone aerials become news standard. Multi-angle live streaming normalized.",
+      home: "iPhone as primary camera. Portrait Mode. Computational HDR. Live Photos. Short-form video begins replacing stills.",
+      scientific: "4K scientific documentation standard. Hyperspectral imaging accessible. Time-lapse and macro video normalized.",
+    },
+    lens: "Optical image stabilization standard. Fast AF with eye-tracking. Computational lens correction removes distortion in-camera. Very clean — almost too clean.",
+    damages: ["over-processed computational HDR", "artificial portrait mode bokeh edge", "drone footage motion smoothness", "over-sharpened 4K detail", "color graded look inconsistency", "gimbal over-stabilized motion", "S-Log flat grading artifacts"],
+    pikaBase: "2015-2019 modern mirrorless aesthetic, Sony A7 series color science, 4K resolution, drone aerial perspective, cinematic color grade",
+    mjBase: "2015-2019 mirrorless photograph, Sony A7R II color science, Fuji film simulation, technically perfect but slightly clinical",
+    fluxBase: "2015-2019 mirrorless era aesthetic, Sony A7 color science, Fuji Classic Chrome simulation, 4K clarity, modern cinematic",
+    gptBase: "Photographed in 2015–2019 on a Sony A7R II or Fujifilm X-T2. The image has the modern mirrorless look: technically excellent exposure and color, possibly with a Fuji film simulation like Classic Chrome or Eterna adding a cinematic quality. Very clean, almost too clean — the kind of image that required no excuses.",
+    sdBase: "2015-2019 mirrorless camera, Sony A7 series, Fuji film simulation, 4K aesthetic, modern cinematic color grade",
+    ideogramBase: "2015-2019 modern mirrorless photographic style, Sony A7 color science, Fuji film simulation aesthetic, 4K clarity",
+    fireflyBase: "Style of 2015-2019 mirrorless photography, Sony A7R II or Fuji X-T2, clean modern color science, cinematic grade",
+    pikaVideo: "2015-2019 4K cinematic video, Sony A7S II or GH5, color graded S-Log, DJI drone aerial perspective, gimbal-stabilized",
+    klingVideo: "2015-2019 4K mirrorless video, Sony A7S II low-light quality, color graded cinematic look, gimbal smooth motion",
+    runwayVideo: "Modern 2015-2019 cinematic 4K, Sony A7S II or GH5, S-Log color grade, drone aerial, gimbal-stabilized movement",
+    soraVideo: "2015-2019 4K mirrorless cinema aesthetic, S-Log color graded, drone aerial perspective, gimbal motion, modern cinematic",
+    veoVideo: "2015-2019 cinematic 4K, Sony A7S II or Panasonic GH5, color graded from S-Log, drone perspective, smooth gimbal",
+    lumaVideo: "Modern mirrorless 2015-2019, 4K color graded cinematic, Sony A7S II aesthetic, drone aerials, gimbal movement",
+    plainEnglish: "This should look like a modern cinematic short film — technically flawless exposure, color graded from a log profile, smooth gimbal movement, possibly a drone aerial establishing shot. Fuji Classic Chrome if you want character, Sony clinical if you want clean. This is the era people are shooting in right now, which means it has almost no nostalgia value yet — unless you're specifically going for that 2017 indie film festival look.",
+  },
+];
+
+function getEra(year) {
+  return eraData.find(e => year >= e.range[0] && year <= e.range[1]) || eraData[eraData.length - 1];
+}
+
+// ═══════════════════════════════════════════════
+// REFERENCE IMAGE MAP
+// ═══════════════════════════════════════════════
+const referenceImages = {
+  1920: { src: 'era_1920.png', caption: 'Empty church interior, 1920s — Speed Graphic / orthochromatic glass plate' },
+  1930: { src: 'era_1930.png', caption: 'Rain-slicked city street, 1930s — Rolleiflex / panchromatic film' },
+  1940: { src: 'era_1940.png', caption: 'Kitchen table, 1940s — Speed Graphic / pushed panchromatic' },
+  1950: { src: 'era_1950.png', caption: 'Suburban backyard, 1950s — Leica M3 / Kodachrome 25' },
+  1960: { src: 'era_1960.png', caption: 'Government hallway, 1960s — Nikon F / Ektachrome EF' },
+  1970: { src: 'era_1970.png', caption: 'Apartment corner, 1970s — Aaton 7 / Kodak 7247 pushed tungsten' },
+  1980: { src: 'era_1980.png', caption: 'Convenience store, 1980s — Sony Betacam SP / VHS oxide tape' },
+  1990: { src: 'era_1990.png', caption: 'Bedroom desk, 1990s — Sony Hi8 / MiniDV — MAY 15 1999' },
+  2000: { src: 'era_2000.png', caption: 'High school hallway, 2000s — Canon PowerShot / CCD JPEG' },
+  2005: { src: 'era_2005.png', caption: 'Coffee shop, 2005–2009 — Canon Rebel XT / DIGIC II' },
+  2010: { src: 'era_2010.png', caption: 'Rooftop golden hour, 2010–2014 — Canon 5D Mk II / VSCO grade' },
+  2015: { src: 'era_2015.png', caption: 'Forest path, 2015–2019 — Sony A7R II / BSI CMOS full-frame' },
+};
+
+function getReferenceImage(year) {
+  if (year >= 2015) return referenceImages[2015];
+  if (year >= 2010) return referenceImages[2010];
+  if (year >= 2005) return referenceImages[2005];
+  if (year >= 2000) return referenceImages[2000];
+  if (year >= 1990) return referenceImages[1990];
+  if (year >= 1980) return referenceImages[1980];
+  if (year >= 1970) return referenceImages[1970];
+  if (year >= 1960) return referenceImages[1960];
+  if (year >= 1950) return referenceImages[1950];
+  if (year >= 1940) return referenceImages[1940];
+  if (year >= 1930) return referenceImages[1930];
+  return referenceImages[1920];
+}
+
+
+let currentYear = 1963;
+let currentCtx = 'documentary';
+let currentCamType = 'still';
+let activeDamages = new Set();
+let promptsGenerated = false;
+
+// ═══════════════════════════════════════════════
+// DECADE MARKS
+// ═══════════════════════════════════════════════
+function buildDecadeMarks() {
+  const container = document.getElementById('decadeMarks');
+  container.innerHTML = '';
+  for (let y = 1920; y <= 2019; y += 10) {
+    const pct = (y - 1920) / (2019 - 1920) * 100;
+    const div = document.createElement('div');
+    div.className = 'decade-mark';
+    div.textContent = y;
+    div.style.cssText = `position:absolute; left:${pct}%; transform:translateX(-50%);`;
+    container.style.position = 'relative';
+    container.style.height = '18px';
+    container.appendChild(div);
+  }
+}
+
+function updateDecadeMarks(year) {
+  const decade = Math.floor(year / 10) * 10;
+  document.querySelectorAll('.decade-mark').forEach(m => {
+    m.classList.toggle('active', parseInt(m.textContent) === decade);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════
+function renderEra() {
+  const era = getEra(currentYear);
+  const cam = currentCamType === 'still' ? era.still : era.video;
+
+  // Hero
+  document.getElementById('eraBadge').textContent = era.badge;
+  document.getElementById('eraName').textContent = era.name;
+  document.getElementById('eraDesc').textContent = era.desc;
+
+  // Camera grid
+  document.getElementById('cameraGrid').innerHTML = `
+    <div class="info-card animate">
+      <div class="info-card-label"><span class="dot"></span>Camera System</div>
+      <div class="info-card-title">${cam.camera}</div>
+      <div class="info-card-sub">${cam.cameraDetail}</div>
+    </div>
+    <div class="info-card animate">
+      <div class="info-card-label"><span class="dot ${currentCamType === 'still' ? '' : 'blue'}"></span>${currentCamType === 'still' ? 'Film Stock' : 'Recording Medium'}</div>
+      <div class="info-card-title">${cam.film}</div>
+      <div class="info-card-sub">${cam.filmDetail}</div>
+    </div>
+    <div class="info-card animate">
+      <div class="info-card-label"><span class="dot gold"></span>Lens Character</div>
+      <div class="info-card-title">Era Optics</div>
+      <div class="info-card-sub">${era.lens}</div>
+    </div>
+  `;
+
+  // Tech grid
+  const lighting = era.lighting[currentCtx] || 'Consult context-specific lighting for this era.';
+  document.getElementById('techGrid').innerHTML = `
+    <div class="info-card animate">
+      <div class="info-card-label"><span class="dot green"></span>Lighting Style</div>
+      <div class="info-card-title">${currentCtx.charAt(0).toUpperCase() + currentCtx.slice(1)}</div>
+      <div class="info-card-sub">${lighting}</div>
+    </div>
+    <div class="info-card animate">
+      <div class="info-card-label"><span class="dot purple"></span>Era Range</div>
+      <div class="info-card-title">${era.range[0]}–${era.range[1]}</div>
+      <div class="info-card-sub">Decade: ${Math.floor(currentYear/10)*10}s. ${era.badge} period.</div>
+    </div>
+    <div class="info-card animate">
+      <div class="info-card-label"><span class="dot teal"></span>Format Type</div>
+      <div class="info-card-title">${currentCamType === 'still' ? 'Photography / Still' : 'Motion / Video'}</div>
+      <div class="info-card-sub">${currentCamType === 'still' ? 'Optimized for image generator prompts.' : 'Optimized for video generator prompts.'}</div>
+    </div>
+  `;
+
+  // Reference image
+  const ref = getReferenceImage(currentYear);
+  const refImg = document.getElementById('referenceImg');
+  if (refImg.src !== ref.src) {
+    refImg.style.opacity = '0';
+    setTimeout(() => {
+      refImg.src = ref.src;
+      refImg.style.opacity = '1';
+    }, 200);
+  }
+  document.getElementById('referenceCaption').textContent = ref.caption;
+  document.getElementById('referenceEraLabel').textContent = era.badge;
+
+  // Damage tags
+  const damageContainer = document.getElementById('damageGrid');
+  damageContainer.innerHTML = '';
+  // Set era defaults on first render
+  if (activeDamages.size === 0) {
+    era.damages.slice(0, 3).forEach(d => activeDamages.add(d));
+  }
+  era.damages.forEach(d => {
+    const tag = document.createElement('div');
+    tag.className = 'damage-tag' + (activeDamages.has(d) ? ' active' : '');
+    tag.textContent = d;
+    tag.onclick = () => {
+      if (activeDamages.has(d)) activeDamages.delete(d);
+      else activeDamages.add(d);
+      tag.classList.toggle('active');
+    };
+    damageContainer.appendChild(tag);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// GENERATE PROMPTS
+// ═══════════════════════════════════════════════
+const generators = [
+  { id: 'gpt', name: 'GPT-Image-1', type: 'image', tip: 'Responds best to natural language with painterly intent. No syntax flags needed.' },
+  { id: 'mj', name: 'Midjourney', type: 'image', tip: 'Append --ar 16:9 or --ar 1:1 for aspect ratio. Add --style raw for less AI smoothing.' },
+  { id: 'flux', name: 'Flux Pro', type: 'image', tip: 'Natural language weighted descriptions. Responds well to technical film terminology.' },
+  { id: 'sd', name: 'Stable Diffusion', type: 'image', tip: 'Comma-separated tags work well. Add negative prompts for unwanted artifacts.' },
+  { id: 'ideogram', name: 'Ideogram', type: 'image', tip: 'Descriptive natural language. Good at following photographic direction precisely.' },
+  { id: 'firefly', name: 'Adobe Firefly', type: 'image', tip: 'Use "Style of..." framing. Strong at matching photographic reference styles.' },
+  { id: 'pika', name: 'Pika Labs', type: 'video', tip: 'Add camera movement after the scene description. Specify duration in your settings panel.' },
+  { id: 'kling', name: 'Kling', type: 'video', tip: 'Describe motion and atmosphere separately. Strong at slow atmospheric movement.' },
+  { id: 'runway', name: 'Runway Gen-3', type: 'video', tip: 'Scene description first, then motion direction. Responds well to cinematic language.' },
+  { id: 'sora', name: 'Sora', type: 'video', tip: 'Full sentence natural language. Include camera movement and duration intent.' },
+  { id: 'veo', name: 'Veo 3', type: 'video', tip: 'Detailed scene description with lighting, motion, and atmosphere. Cinematic language preferred.' },
+  { id: 'luma', name: 'Luma Dream Machine', type: 'video', tip: 'Scene + motion description. Good at atmospheric and slow cinematic movement.' },
+];
+
+function buildPrompt(gen, era) {
+  const damageStr = activeDamages.size > 0 ? [...activeDamages].join(', ') : 'pristine condition';
+  const lighting = era.lighting[currentCtx] || '';
+  const lightingShort = lighting.split('.')[0];
+  const cam = currentCamType === 'still' ? era.still : era.video;
+
+  const prompts = {
+    gpt: `${era.gptBase} Lighting: ${lightingShort}. ${cam.film}. Damage and authenticity: ${damageStr}.`,
+    mj: `${era.mjBase}, ${lightingShort.toLowerCase()}, ${damageStr} --ar 16:9`,
+    flux: `${era.fluxBase}, ${lightingShort.toLowerCase()}, ${damageStr}, photorealistic`,
+    sd: `${era.sdBase}, ${lightingShort.toLowerCase()}, ${damageStr}`,
+    ideogram: `${era.ideogramBase}, ${lightingShort.toLowerCase()}, ${damageStr}`,
+    firefly: `${era.fireflyBase}, ${lightingShort.toLowerCase()}, ${damageStr}`,
+    pika: `${era.pikaVideo}, ${lightingShort.toLowerCase()}, ${damageStr}. Slow push in. Hold on static frame. Minimal camera movement.`,
+    kling: `${era.klingVideo}, ${lightingShort.toLowerCase()}, ${damageStr}. Slow atmospheric movement. Hold long takes.`,
+    runway: `${era.runwayVideo}, ${lightingShort.toLowerCase()}, ${damageStr}. Camera: slow dolly or static. Cinematic pace.`,
+    sora: `${era.soraVideo}, ${lightingShort.toLowerCase()}, ${damageStr}. Static or very slow camera movement. Long atmospheric take.`,
+    veo: `${era.veoVideo}, ${lightingShort.toLowerCase()}, ${damageStr}. Slow camera, long take, atmospheric mood.`,
+    luma: `${era.lumaVideo}, ${lightingShort.toLowerCase()}, ${damageStr}. Slow movement, hold on atmosphere.`,
+  };
+
+  return prompts[gen.id] || '';
+}
+
+function generatePrompts() {
+  const era = getEra(currentYear);
+  promptsGenerated = true;
+
+  const imageGens = generators.filter(g => g.type === 'image');
+  const videoGens = generators.filter(g => g.type === 'video');
+  const toShow = currentCamType === 'still'
+    ? [...imageGens, ...videoGens]
+    : [...videoGens, ...imageGens];
+
+  // Build dropdown options grouped by type
+  let optionsHTML = `
+    <optgroup label="── Image Generators ──">
+      ${imageGens.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}
+    </optgroup>
+    <optgroup label="── Video Generators ──">
+      ${videoGens.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}
+    </optgroup>
+  `;
+
+  // Default selection: first in preferred order
+  const defaultGen = toShow[0];
+  const defaultPrompt = buildPrompt(defaultGen, era);
+
+  document.getElementById('promptsBody').innerHTML = `
+    <div class="gen-picker-row">
+      <span class="gen-picker-label">Generator</span>
+      <div class="gen-select-wrap">
+        <select class="gen-select" id="genSelect" onchange="switchGenerator(this.value)">
+          ${optionsHTML}
+        </select>
+        <span class="gen-select-arrow">▾</span>
+      </div>
+      <span class="gen-type-badge ${defaultGen.type === 'image' ? 'badge-img' : 'badge-vid'}" id="genTypeBadge">${defaultGen.type === 'image' ? 'Image' : 'Video'}</span>
+    </div>
+    <div class="prompt-pane active" id="activePane">
+      <div class="prompt-meta">
+        <div class="prompt-meta-name" id="genName">${defaultGen.name}</div>
+        <div class="prompt-meta-type type-${defaultGen.type}" id="genTypeLabel">${defaultGen.type === 'image' ? 'Image Generator' : 'Video Generator'}</div>
+      </div>
+      <div class="prompt-tip" id="genTip">${defaultGen.tip}</div>
+      <div class="prompt-box" id="activeBox">
+        <button class="copy-btn" onclick="copyActivePrompt()">Copy</button>
+        <div class="prompt-text" id="activePromptText">${defaultPrompt}</div>
+      </div>
+      <div class="plain-section">
+        <div class="plain-label">Director's Note</div>
+        <div class="plain-text" id="directorNote">${era.plainEnglish}</div>
+      </div>
+    </div>
+  `;
+
+  // Set select to default
+  document.getElementById('genSelect').value = defaultGen.id;
+  document.getElementById('promptsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchGenerator(genId) {
+  const era = getEra(currentYear);
+  const gen = generators.find(g => g.id === genId);
+  if (!gen) return;
+
+  const prompt = buildPrompt(gen, era);
+  document.getElementById('activePromptText').textContent = prompt;
+  document.getElementById('genName').textContent = gen.name;
+  document.getElementById('genTip').textContent = gen.tip;
+  document.getElementById('genTypeLabel').textContent = gen.type === 'image' ? 'Image Generator' : 'Video Generator';
+  document.getElementById('genTypeLabel').className = `prompt-meta-type type-${gen.type}`;
+  const badge = document.getElementById('genTypeBadge');
+  badge.textContent = gen.type === 'image' ? 'Image' : 'Video';
+  badge.className = `gen-type-badge ${gen.type === 'image' ? 'badge-img' : 'badge-vid'}`;
+}
+
+function copyActivePrompt() {
+  const text = document.getElementById('activePromptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('activeBox').querySelector('.copy-btn');
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+
+
+// ═══════════════════════════════════════════════
+// EVENT LISTENERS
+// ═══════════════════════════════════════════════
+
+document.getElementById('yearSlider').addEventListener('input', e => {
+  currentYear = parseInt(e.target.value);
+  document.getElementById('yearDisplay').textContent = currentYear;
+  document.getElementById('statusYear') && (document.getElementById('statusYear').textContent = currentYear);
+  activeDamages.clear();
+  updateDecadeMarks(currentYear);
+  renderEra();
+  if (promptsGenerated) generatePrompts();
+});
+
+document.querySelectorAll('.context-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.context-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCtx = btn.dataset.ctx;
+    renderEra();
+    if (promptsGenerated) generatePrompts();
+  });
+});
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentCamType = tab.dataset.tab;
+    activeDamages.clear();
+    renderEra();
+    if (promptsGenerated) generatePrompts();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+buildDecadeMarks();
+updateDecadeMarks(currentYear);
+renderEra();
+</script>
+</body>
+</html>
